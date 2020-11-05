@@ -280,7 +280,7 @@ enum huff_ERROR huff_compressWrite() {
     return huff_OK;
 }
 
-unsigned int huff_decompressWrite(unsigned int checkSum_bypass) {
+enum huff_ERROR huff_decompressWrite(unsigned int checkSum_bypass) {
     // Just a checkSum structure
     union {
 	struct {
@@ -291,10 +291,10 @@ unsigned int huff_decompressWrite(unsigned int checkSum_bypass) {
     } checkSum;
 
     if (hIN.type != COMPRESS || hIN.file == NULL) {
-	return 0;
+	return huff_hIN_BAD;
     }
     if (hOUT.type != DECOMPRESS || hOUT.file == NULL) {
-	return 0;
+	return huff_hOUT_BAD;
     }
 
     if (checkSum_bypass == huff_CHECKFILE) {
@@ -317,7 +317,7 @@ unsigned int huff_decompressWrite(unsigned int checkSum_bypass) {
 
     huff_createTable();
     if (!huff_tableToTree()) {
-	return 0;
+	return huff_OOM;
     }    
 
     // Read ahead to where compressed data starts

@@ -47,12 +47,12 @@ typedef struct {
     bitStream *buffer;
 } huff_fileIO;
 
-unsigned int huff_initIO(char *infile, char *outfile, enum IO_TYPE comp);
+enum huff_ERROR huff_initIO(char *infile, char *outfile, enum IO_TYPE comp);
 
 void huff_clean();
 
-unsigned int huff_compressWrite();
+enum huff_ERROR huff_compressWrite();
 
-unsigned int huff_decompressWrite(unsigned int checkSum_bypass);
+enum huff_ERROR huff_decompressWrite(unsigned int checkSum_bypass);
 
 #endif
