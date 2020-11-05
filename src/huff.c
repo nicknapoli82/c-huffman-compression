@@ -111,8 +111,9 @@ void huff_clean() {
     }
 
     // Clean up our vt allocations
-    for (unsigned int i = 0; i < POSSIBLE_VALUES && vb[i].bits != NULL; i++) {
-	free(vb[i].bits);
+    for (unsigned int i = 0; i < POSSIBLE_VALUES; i++) {
+	if(vb[i].bits != NULL)
+	    free(vb[i].bits);
     }
 }
 
