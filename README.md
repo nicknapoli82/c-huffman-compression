@@ -10,6 +10,8 @@ A very simple program just figuring out how to put together the Huffman compress
 ./huff -d <infile> <outfile>
 ```
 
-Want to change the tree traversal bit generator into a lookup table. Right now compression is a little slow at about 20 seconds per 50Mb. Decompression speed is reasonable though. I would like to add would be `zip` like directory structures within the compressed file. TBD if I get around to doing that. I should also add an implicit extension that the program appends to a compressed file. 
+Want to change the tree traversal bit generator into a lookup table. ~~Right now compression is a little slow at about 20 seconds per 50Mb.~~ Decompression speed is reasonable though. I would like to add would be `zip` like directory structures within the compressed file. TBD if I get around to doing that. I should also add an implicit extension that the program appends to a compressed file. 
 
 Still need to clean up the code a bit.
+
+[UPDATE] Fixed compression time. Rather than use the tree to gather bits for every value in the hIN file we precompute all values in the tree to a look up table. This results in roughly 10x faster compression time. Can now compress about 50Mb in about 3 seconds.
