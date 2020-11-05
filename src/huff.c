@@ -12,6 +12,7 @@ huff_header header = {
 };
 
 huff_table ht[256];
+huff_valueBits vb[256];
 minBTree *huffTree;
 unsigned int ht_length;
 
@@ -75,6 +76,7 @@ enum huff_ERROR huff_initIO(char *infile, char *outfile, enum IO_TYPE comp) {
 }
 
 void huff_clean() {
+    // Clean up our files
     if (hIN.file != NULL) {
 	fclose(hIN.file);
     }
@@ -107,6 +109,11 @@ void huff_clean() {
     if (huffTree != NULL) {
 	minTree_destroyTree(huffTree);
     }
+
+    // Clean up our vt allocations
+    for (unsigned int i = 0; i < POSSIBLE_VALUES && vb[i].bits != NULL; i++) {
+	free(vb[i].bits);
+    }
 }
 
 void huff_resetFileState(huff_fileIO *f) {
@@ -128,10 +135,10 @@ unsigned int huff_readHeader() {
 
 unsigned int huff_uniqueTable() {
     // Pull all entries in the table into lowest free indexes
-    // We are going to play a little cat and mouse at first
     unsigned int lowest_idx = 0;
-    for (int i = lowest_idx; i < POSSIBLE_VALUES && lowest_idx < POSSIBLE_VALUES; i++) {
+    for (int i = 0; i < POSSIBLE_VALUES && lowest_idx < POSSIBLE_VALUES; ) {
 	while(ht[lowest_idx].freq && lowest_idx < POSSIBLE_VALUES) lowest_idx++;
+	i = lowest_idx;
 	while(!ht[i].freq && i < POSSIBLE_VALUES) i++;
 	if (ht[i].freq && i < POSSIBLE_VALUES && lowest_idx < POSSIBLE_VALUES) {
 	    ht[lowest_idx] = ht[i];
@@ -225,6 +232,18 @@ unsigned int huff_tableToTree() {
     return 1;
 }
 
+enum huff_ERROR huff_treeTo_valueBits() {
+    for (unsigned int i = 0; i < ht_length; i++) {
+	vb[ht[i].value].length = minTree_toBits(ht[i].value, huffTree);	
+	unsigned int byte_length = (vb[ht[i].value].length / 8) + 1;
+	vb[ht[i].value].bits = calloc(byte_length, 1);
+	if (vb[ht[i].value].bits == NULL)
+	    return huff_OOM;
+	memcpy(vb[ht[i].value].bits, treeBits, byte_length);
+    }
+    return huff_OK;
+}
+
 // This ties everything in above to actually do the work
 // of compressing everything
 enum huff_ERROR huff_compressWrite() {
@@ -239,6 +258,9 @@ enum huff_ERROR huff_compressWrite() {
     if (!huff_tableToTree()) {
 	return huff_OOM;
     }
+    if (huff_treeTo_valueBits() != huff_OK) {
+	return huff_OOM;	
+    }
 
     // Skip forward in the hOUT file far enough to later
     // write out the header and table
@@ -250,15 +272,17 @@ enum huff_ERROR huff_compressWrite() {
 	hIN.buffer_at = 0;
 	
 	while (hIN.buffer_at < hIN.bytes_read) {
-	    uint64_t bitsRead = minTree_toBits(hIN.buffer->data[hIN.buffer_at], huffTree);
-	    uint64_t shouldWrite = bitStream_addToData(hOUT.buffer, (uint8_t *)treeBits, bitsRead, 0);
+	    uint64_t shouldWrite = bitStream_addToData(hOUT.buffer, vb[hIN.buffer->data[hIN.buffer_at]].bits,
+						       vb[hIN.buffer->data[hIN.buffer_at]].length, 0);	    
 	    if (shouldWrite) {
 		fwrite(hOUT.buffer->data, 1, hOUT.buffer->current_byte_offset, hOUT.file);
 		memset(hOUT.buffer->data, 0, BUFFER_SIZE);
 		hOUT.buffer_at = 0;
 		bitStream_clearData(hOUT.buffer);
 		// Write in the bits that would have overflowed the data buffer
-		bitStream_addToData(hOUT.buffer, (uint8_t *)treeBits, bitsRead, bitsRead - shouldWrite);
+		bitStream_addToData(hOUT.buffer, vb[hIN.buffer->data[hIN.buffer_at]].bits,
+				    vb[hIN.buffer->data[hIN.buffer_at]].length,
+				    vb[hIN.buffer->data[hIN.buffer_at]].length - shouldWrite);
 	    }
 	    hIN.buffer_at++;
 	}

@@ -35,17 +35,22 @@ typedef struct {
 } __attribute__((packed)) huff_header;
 
 typedef struct {
-    uint32_t freq;
-    uint8_t value;
-} __attribute__((packed)) huff_table;
-
-typedef struct {
     enum IO_TYPE type;
     FILE *file;
     uint32_t bytes_read;
     uint32_t buffer_at;
     bitStream *buffer;
 } huff_fileIO;
+
+typedef struct {
+    uint32_t freq;
+    uint8_t value;
+} __attribute__((packed)) huff_table;
+
+typedef struct {
+    uint8_t *bits;
+    uint8_t length;
+} huff_valueBits;
 
 enum huff_ERROR huff_initIO(char *infile, char *outfile, enum IO_TYPE comp);
 
