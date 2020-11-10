@@ -8,16 +8,15 @@
 
 #define BUFFER_SIZE 4096
 #define POSSIBLE_VALUES 256
-
-// DECOMPRESS and COMPRESS are the type of file respectively
-// COMPRESS is the compressed file
-enum IO_TYPE {huff_NONE, DECOMPRESS, COMPRESS};
-enum huff_ERROR {huff_OK, huff_hIN_BAD, huff_hOUT_BAD, huff_COMPRESS_BADCHECKSUM,
-                 huff_DECOMPRESS_BADCHECKSUM, huff_OOM, huff_BADHEADER};
 #define huff_CHECKFILE 1
 #define huff_CHECKFILE_SKIP 0
 
-// head_number shall be "HUFF" always
+// DECOMPRESS and COMPRESS are the type of file respectively
+enum IO_TYPE {huff_NONE, DECOMPRESS, COMPRESS};
+enum huff_ERROR {huff_OK, huff_hIN_BAD, huff_hOUT_BAD, huff_COMPRESS_BADCHECKSUM,
+                 huff_DECOMPRESS_BADCHECKSUM, huff_OOM, huff_BADHEADER};
+
+// head_number shall be "HUF" always
 // hi - compressed checksum only
 // lo - decompressed checksum only
 // sizeof(huff_header) is 12 bytes

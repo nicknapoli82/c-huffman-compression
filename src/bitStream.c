@@ -43,13 +43,9 @@ int64_t bitStream_addToData(bitStream *toFill, uint8_t *values,
     
     while (initial_bit_offset < bits_size) {
 	// Data buffer is full
-
 	if (toFill->current_bit_offset >= toFill->last_bit) {
 	    return bits_size - initial_bit_offset;
 	}
-
-	// TESTING
-//	printf("Filling byte %i using bit %lu\n", toFill->current_byte_offset, toFill->current_bit_offset);
 	
 	uint8_t bit = values[values_position] & (1 << (7 - values_bitOffset));
 	if (bit)

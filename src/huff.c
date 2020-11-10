@@ -11,10 +11,15 @@ huff_header header = {
     .frequencies_length = 0,
 };
 
+// The resulting table from an uncompressed file
+// This array after buildTable becomes static
 huff_table ht[256];
-huff_valueBits vb[256];
 minBTree *huffTree;
-unsigned int ht_length;
+
+// Effectively the data streams built from the huff tree
+huff_valueBits vb[256];
+
+unsigned int ht_length = 0;
 
 huff_fileIO hIN = {.type = huff_NONE};
 huff_fileIO hOUT = {.type = huff_NONE};
@@ -33,9 +38,6 @@ FILE *huff_openFile(char *fname, char method) {
 }
 
 enum huff_ERROR huff_initIO(char *infile, char *outfile, enum IO_TYPE comp) {
-    // Later check if outfile already exists
-    // Warn, and ask to continue
-
     hIN = (huff_fileIO){
 	.type = comp == COMPRESS ? DECOMPRESS : COMPRESS,
 	.file = huff_openFile(infile, 'r'),
@@ -134,21 +136,17 @@ unsigned int huff_readHeader() {
     return 0;
 }
 
-unsigned int huff_uniqueTable() {
+unsigned int huff_reduceTable() {
     // Pull all entries in the table into lowest free indexes
-    unsigned int lowest_idx = 0;
-    for (int i = 0; i < POSSIBLE_VALUES && lowest_idx < POSSIBLE_VALUES; ) {
-	while(ht[lowest_idx].freq && lowest_idx < POSSIBLE_VALUES) lowest_idx++;
-	i = lowest_idx;
+    for (int i = 0; i < POSSIBLE_VALUES && ht_length < POSSIBLE_VALUES; ) {
+	while(ht[ht_length].freq && ht_length < POSSIBLE_VALUES) ht_length++;
+	i = ht_length;
 	while(!ht[i].freq && i < POSSIBLE_VALUES) i++;
-	if (ht[i].freq && i < POSSIBLE_VALUES && lowest_idx < POSSIBLE_VALUES) {
-	    ht[lowest_idx] = ht[i];
+	if (ht[i].freq && i < POSSIBLE_VALUES && ht_length < POSSIBLE_VALUES) {
+	    ht[ht_length] = ht[i];
 	    ht[i] = (huff_table){0, 0};
 	}
     }
-
-    // May as well set ht_length now
-    ht_length = lowest_idx;
 
     // Sort the table
     // We are just using bubble sort at the moment
@@ -161,17 +159,6 @@ unsigned int huff_uniqueTable() {
 		huff_table temp = ht[j];
 		ht[j] = ht[j + 1];
 		ht[j + 1] = temp;
-	    }
-	}
-    }
-
-    // Ensure that all resulting elements in the table are unique
-    // This is done by spreading the upper frequencies up by one
-    // for every subsequent index in the remaining table
-    for (unsigned int i = 0; i < ht_length - 1; i++) {
-	if (ht[i].freq == ht[i + 1].freq) {
-	    for (unsigned int j = i + 1; j < ht_length; j++) {
-		ht[j].freq++;
 	    }
 	}
     }
@@ -194,8 +181,7 @@ unsigned int huff_createTable() {
 		hIN.buffer_at++;
 	    }
 	}
-	// Ensure all values in the table are indeed unique
-	huff_uniqueTable();
+	huff_reduceTable();
     }
     else {
 	// Just read in the table from the file
@@ -203,13 +189,15 @@ unsigned int huff_createTable() {
 	fread(&ht, sizeof(huff_table), header.frequencies_length, hIN.file);
 	ht_length = header.frequencies_length;
     }
-    
-    // Reset hIN back to an unread state
+
     huff_resetFileState(&hIN);
 
     return 1;
 }
 
+// We are just using a very simple XOR for every byte in the file
+// Maybe not the best checksum, but suffices for the intent of this
+// program I think
 uint8_t huff_checksum(huff_fileIO *hf, uint32_t start) {
     uint8_t result = 0;
 
